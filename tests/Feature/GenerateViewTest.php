@@ -39,3 +39,20 @@ it('renders alternate hreflang links but skips the current locale', function () 
 it('renders nothing when no metas were ever set', function () {
     expect(trim(Xseo::generate()))->toBe('');
 });
+
+it('escapes </script> inside JSON-LD schema data so it cannot break out of the script tag', function () {
+    Xseo::set([
+        'schema' => [
+            [
+                '@type' => 'Review',
+                'reviewBody' => '</script><script>alert(1)</script>',
+            ],
+        ],
+    ]);
+
+    $html = Xseo::generate();
+
+    expect($html)
+        ->not->toContain('</script><script>alert(1)</script>')
+        ->toContain('<\/script>');
+});

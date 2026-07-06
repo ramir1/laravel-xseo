@@ -12,10 +12,11 @@ class XseoServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/xseo.php', 'xseo');
 
-        // Синглтон биндится на класс, 'xseo' — алиас НА него. Обратный порядок
-        // (singleton('xseo', ...) + alias(XseoManager::class, 'xseo')) означает,
-        // что app('xseo') резолвится как XseoManager::class, для которого нет
-        // singleton-биндинга — новый объект на каждый вызов, не кешируется.
+        // The singleton is bound on the class, 'xseo' is an alias TO it. The
+        // reverse order (singleton('xseo', ...) + alias(XseoManager::class,
+        // 'xseo')) would mean app('xseo') resolves fine but XseoManager::class
+        // itself has no singleton binding — a fresh instance on every call,
+        // never cached.
         $this->app->singleton(XseoManager::class, fn () => new XseoManager);
         $this->app->alias(XseoManager::class, 'xseo');
     }
@@ -34,10 +35,10 @@ class XseoServiceProvider extends ServiceProvider
             ], 'xseo-views');
         }
 
-        // Ленивая загрузка: require rules-файлов происходит только при первом
-        // реальном резолве 'xseo' за запрос. Container::resolve() не повторяет
-        // resolving-колбэки для уже закешированного синглтона, так что это
-        // сработает ровно один раз за запрос, а не на каждом обращении.
+        // Lazy loading: rule files are require()'d only on the first actual
+        // resolution of 'xseo' per request. Container::resolve() doesn't
+        // repeat resolving callbacks for an already-cached singleton, so this
+        // fires exactly once per request, not on every access.
         $this->app->resolving('xseo', fn () => $this->loadRules());
     }
 

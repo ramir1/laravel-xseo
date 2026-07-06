@@ -28,6 +28,10 @@ class XseoServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../config/xseo.php' => config_path('xseo.php'),
             ], 'xseo-config');
+
+            $this->publishes([
+                __DIR__.'/../resources/views' => resource_path('views/vendor/xseo'),
+            ], 'xseo-views');
         }
 
         // Ленивая загрузка: require rules-файлов происходит только при первом

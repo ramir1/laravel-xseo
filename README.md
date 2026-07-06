@@ -29,6 +29,14 @@ php artisan vendor:publish --tag=xseo-config
 
 This creates `config/xseo.php`, where you point `files` at your own rules file(s) and adjust `copy`/`rules` as needed.
 
+## Publishing the view
+
+```bash
+php artisan vendor:publish --tag=xseo-views
+```
+
+This creates `resources/views/vendor/xseo/xseo-all.blade.php`, which Laravel's view resolution then prefers over the package's own copy — customize it freely to change how metas render.
+
 ## Rule DSL: `rule()` / `create()` / `parent()`
 
 A **rule** is a named closure (or class — see below) that returns an array of meta key/value pairs:

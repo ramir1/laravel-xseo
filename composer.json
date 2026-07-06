@@ -1,0 +1,57 @@
+{
+    "name": "ramir1/laravel-xseo",
+    "description": "Generic SEO meta-tags manager for Laravel: title, description, canonical, hreflang alternates, Open Graph, Twitter Card and JSON-LD, driven by simple named rules.",
+    "type": "library",
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "authors": [
+        {
+            "name": "Vadim Trofimov",
+            "email": "vadimtrofimov@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^11.0|^12.0|^13.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^2.0|^3.0",
+        "laravel/pint": "^1.0",
+        "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0",
+        "pestphp/pest-plugin-laravel": "^3.0|^4.0"
+    },
+    "scripts": {
+        "test": "pest",
+        "pint": "pint",
+        "phpstan": "phpstan analyse"
+    },
+    "autoload": {
+        "classmap": [],
+        "files": [
+            "src/helpers.php"
+        ],
+        "psr-4": {
+            "Ramir\\Xseo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ramir\\Xseo\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Ramir\\Xseo\\XseoServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

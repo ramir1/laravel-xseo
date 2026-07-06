@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src/
+
+    level: 5
+
+    ignoreErrors:
+        -
+            # Larastan can't statically verify a view namespace ('xseo::') that's
+            # only registered at runtime via loadViewsFrom() in this same package.
+            message: '#Parameter \#1 \$view of function view expects view-string\|null, string given#'
+            path: src/XseoManager.php

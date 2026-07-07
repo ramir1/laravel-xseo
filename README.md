@@ -8,17 +8,6 @@ Generic SEO meta-tags manager for Laravel: title, description, canonical, hrefla
 composer require ramir1/laravel-xseo
 ```
 
-For local development against a monorepo (as in this project), require it via a path repository:
-
-```json
-"repositories": {
-    "0": { "type": "path", "url": "./packages/ramir1/*", "options": { "symlink": true } }
-},
-"require": {
-    "ramir1/laravel-xseo": "@dev"
-}
-```
-
 The package's service provider is auto-discovered — no manual registration needed.
 
 ## Publishing the config

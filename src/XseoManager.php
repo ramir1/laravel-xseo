@@ -24,7 +24,7 @@ class XseoManager
 
     public function __construct()
     {
-        $this->metas = collect(config('xseo.metas', []));
+        $this->metas = collect();
         $this->divider = config('xseo.divider', ' | ');
     }
 

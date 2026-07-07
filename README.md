@@ -101,6 +101,37 @@ This is a plain, serializable array of class-strings — fully compatible with `
 
 `Xseo::rule()`-registered closures always take priority over `config('xseo.rules')` entries of the same name.
 
+## `ruleRegister()` — package-provided fallback rules
+
+`Xseo::rule()` and `config('xseo.rules')` both assume *your* application is doing the
+registering. If you're shipping a reusable package that wants to provide a rule out of the box —
+but still let the consuming application override it — use `ruleRegister()` instead:
+
+```php
+// inside your package's service provider
+Xseo::ruleRegister('blog.index', BlogIndexRule::class);
+```
+
+It accepts the same handler shapes as `config('xseo.rules')` (a `Closure`, a class-string
+implementing `XseoRule`, a `[Class::class, 'method']` pair, or a plain associative array of
+static values). Unlike `Xseo::rule()`, a `ruleRegister()` registration is only used as a
+fallback — the consuming application can override it by registering the same name through either
+of the higher-priority mechanisms above:
+
+```php
+// config/xseo.php — overrides the package's 'blog.index' rule
+'rules' => [
+    'blog.index' => \App\Xseo\CustomBlogRule::class,
+],
+```
+
+Full resolution order for a given rule name:
+
+1. `Xseo::rule($name, $closure)` — highest priority;
+2. `config('xseo.rules')[$name]`;
+3. `Xseo::ruleRegister($name, $handler)` — package-provided fallback;
+4. (only for `default`, see below) `config('xseo.defaults_class')`.
+
 ## Default rule fallback (`config('xseo.defaults')` / `defaults_class`)
 
 If you don't want to register a `default` rule at all — via `Xseo::rule('default', ...)` or `config('xseo.rules')['default']` — you can instead set static fallback values directly:
@@ -117,7 +148,8 @@ These are read by the package's shipped `Ramir\Xseo\Rules\DefaultRule`, wired in
 
 1. `Xseo::rule('default', $closure)` — wins if registered;
 2. `config('xseo.rules')['default']` — wins if set;
-3. `config('xseo.defaults_class')` (defaults to `Ramir\Xseo\Rules\DefaultRule`, which just returns `config('xseo.defaults', [])`).
+3. `Xseo::ruleRegister('default', $handler)` — wins if set;
+4. `config('xseo.defaults_class')` (defaults to `Ramir\Xseo\Rules\DefaultRule`, which just returns `config('xseo.defaults', [])`).
 
 If you need defaults computed at request time (current locale, tenant, authenticated user, etc.) instead of a static array, point `defaults_class` at your own `XseoRule` implementation:
 

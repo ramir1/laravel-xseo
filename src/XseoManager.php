@@ -17,6 +17,9 @@ class XseoManager
     /** @var array<string, Closure> */
     protected array $rules = [];
 
+    /** @var array<string, Closure|array|string> */
+    protected array $packageRules = [];
+
     public string $divider;
 
     public function __construct()
@@ -33,6 +36,21 @@ class XseoManager
     public function rule(string $name, Closure $callback): void
     {
         $this->rules[$name] = $callback;
+    }
+
+    /**
+     * Register a package-provided fallback rule: used only if $name isn't
+     * also registered via rule() or config('xseo.rules') — lets a package's
+     * service provider ship a default implementation that a consuming
+     * application can still override via its own config, without the
+     * package's registration permanently winning (see resolveRule()).
+     * Accepts the same handler shapes as config('xseo.rules'): a Closure, a
+     * class-string implementing XseoRule, a [Class::class, 'method'] pair, or
+     * a plain associative array of static values.
+     */
+    public function ruleRegister(string $name, Closure|array|string $handler): void
+    {
+        $this->packageRules[$name] = $handler;
     }
 
     /**
@@ -146,6 +164,10 @@ class XseoManager
             return $this->rules[$name] = $this->makeRuleClosure("xseo.rules.$name", $handler);
         }
 
+        if (isset($this->packageRules[$name])) {
+            return $this->rules[$name] = $this->makeRuleClosure("xseo.ruleRegister.$name", $this->packageRules[$name]);
+        }
+
         if ($name === 'default') {
             return $this->rules[$name] = $this->makeRuleClosure(
                 'xseo.defaults_class',
@@ -179,9 +201,12 @@ class XseoManager
     }
 
     /**
-     * Normalizes a handler (from config('xseo.rules') or an inline call) into
-     * a Closure with the same signature as a rule() callback. Supported
-     * shapes:
+     * Normalizes a handler (from config('xseo.rules'), ruleRegister(), or an
+     * inline call) into a Closure with the same signature as a rule()
+     * callback. Supported shapes:
+     *   - a Closure, used as-is (only reaches here via ruleRegister() —
+     *     normalizeRule() already short-circuits Closures for create()/
+     *     parent() before calling this method);
      *   - a class-string implementing XseoRule, resolved via the container
      *     once and memoized (constructor DI is supported);
      *   - a [ClassName::class, 'method'] two-element callable-style array;
@@ -189,6 +214,10 @@ class XseoManager
      */
     protected function makeRuleClosure(string $context, mixed $handler): Closure
     {
+        if ($handler instanceof Closure) {
+            return $handler;
+        }
+
         if (is_string($handler)) {
             if (! is_a($handler, XseoRule::class, true)) {
                 throw new InvalidArgumentException(

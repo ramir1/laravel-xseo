@@ -98,3 +98,84 @@ it('parent() accepts an inline [Class, method] handler and does not mutate state
     expect($result)->toBe(['title' => 'Page: about']);
     expect($xseo->get()->isEmpty())->toBeTrue();
 });
+
+it('ruleRegister() supplies a rule when nothing else registers that name', function () {
+    $xseo = new XseoManager;
+    $xseo->ruleRegister('fixture.package', fn () => ['title' => 'From package fallback']);
+
+    $xseo->create('fixture.package');
+
+    expect($xseo->get('title'))->toBe('From package fallback');
+});
+
+it('config xseo.rules overrides a ruleRegister() registration of the same name', function () {
+    config(['xseo.rules' => ['fixture.package' => ['title' => 'From app config']]]);
+
+    $xseo = new XseoManager;
+    $xseo->ruleRegister('fixture.package', fn () => ['title' => 'From package fallback']);
+
+    $xseo->create('fixture.package');
+
+    expect($xseo->get('title'))->toBe('From app config');
+});
+
+it('an explicit rule() overrides a ruleRegister() registration of the same name', function () {
+    $xseo = new XseoManager;
+    $xseo->ruleRegister('fixture.package', fn () => ['title' => 'From package fallback']);
+    $xseo->rule('fixture.package', fn () => ['title' => 'From explicit rule()']);
+
+    $xseo->create('fixture.package');
+
+    expect($xseo->get('title'))->toBe('From explicit rule()');
+});
+
+it('ruleRegister() accepts the same handler shapes as config xseo.rules', function () {
+    HomeXseoRule::$constructed = 0;
+
+    $xseo = new XseoManager;
+    $xseo->ruleRegister('fixture.package.class', HomeXseoRule::class);
+    $xseo->ruleRegister('fixture.package.method', [PageXseoRuleHandler::class, 'meta']);
+    $xseo->ruleRegister('fixture.package.static', ['title' => 'Static package title']);
+
+    $xseo->create('fixture.package.class');
+    expect($xseo->get('title'))->toBe('From class rule');
+    expect(HomeXseoRule::$constructed)->toBe(1);
+
+    $xseo->create('fixture.package.method', 'about');
+    expect($xseo->get('title'))->toBe('Page: about');
+
+    $xseo->create('fixture.package.static');
+    expect($xseo->get('title'))->toBe('Static package title');
+});
+
+it('ruleRegister(\'default\', ...) wins over defaults_class but loses to rule()/config for \'default\'', function () {
+    config(['xseo.defaults' => ['og:type' => 'from-defaults-class']]);
+
+    $xseo = new XseoManager;
+    $xseo->ruleRegister('default', fn () => ['og:type' => 'from-package-default']);
+
+    $xseo->create([]);
+
+    expect($xseo->get('og:type'))->toBe('from-package-default');
+});
+
+it('ruleRegister(\'default\', ...) loses to config xseo.rules default', function () {
+    config(['xseo.rules' => ['default' => ['og:type' => 'from-app-config']]]);
+
+    $xseo = new XseoManager;
+    $xseo->ruleRegister('default', fn () => ['og:type' => 'from-package-default']);
+
+    $xseo->create([]);
+
+    expect($xseo->get('og:type'))->toBe('from-app-config');
+});
+
+it('ruleRegister(\'default\', ...) loses to an explicit rule(\'default\', ...)', function () {
+    $xseo = new XseoManager;
+    $xseo->ruleRegister('default', fn () => ['og:type' => 'from-package-default']);
+    $xseo->rule('default', fn () => ['og:type' => 'from-explicit-rule']);
+
+    $xseo->create([]);
+
+    expect($xseo->get('og:type'))->toBe('from-explicit-rule');
+});

@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Ramir\Xseo\Contracts\XseoRule;
+use Ramir\Xseo\Rules\DefaultRule;
 
 class XseoManager
 {
@@ -73,6 +74,31 @@ class XseoManager
         $default = $this->resolveRule('default');
         $defaults = $default ? $default($this) : [];
 
+        $this->mergeRuleResult($defaults, $rule, ...$params);
+    }
+
+    /**
+     * Same as create(), but never resolves/merges the 'default' rule for this
+     * one call — no Xseo::rule('default', ...), no config('xseo.rules')
+     * ['default'], no config('xseo.defaults_class') fallback. Still applies
+     * config('xseo.copy') auto-fill and merges into the manager's state, same
+     * as create(). Use when a specific call site must NOT inherit the
+     * site-wide defaults (e.g. an embeddable/standalone page).
+     */
+    public function createOnly(string|array|Closure $rule, mixed ...$params): void
+    {
+        $this->mergeRuleResult([], $rule, ...$params);
+    }
+
+    /**
+     * Shared body of create()/createOnly(): resolve $rule, merge it on top of
+     * $defaults ($rule wins on conflicts), apply config('xseo.copy')
+     * auto-fill, and merge the result into the manager's current metas.
+     * $defaults is [] for createOnly() and the resolved 'default' rule's
+     * output for create().
+     */
+    private function mergeRuleResult(array $defaults, string|array|Closure $rule, mixed ...$params): void
+    {
         $resolved = $this->normalizeRule($rule);
         $items = $resolved ? $resolved($this, ...$params) : [];
 
@@ -95,9 +121,15 @@ class XseoManager
 
     /**
      * Find a rule's Closure handler: first among those registered via rule(),
-     * otherwise build one (and memoize it back into $this->rules) from
-     * config('xseo.rules'). See makeRuleClosure() for the supported handler
-     * shapes.
+     * then from config('xseo.rules') (built and memoized back into
+     * $this->rules). For the 'default' rule specifically, and only that name,
+     * one more fallback tier applies below both of those: config
+     * ('xseo.defaults_class') (defaulting to the shipped Rules\DefaultRule,
+     * which just returns config('xseo.defaults', [])), also memoized. This
+     * keeps 'default' resolution non-null in practice (the shipped class
+     * always resolves), but its *output* is [] when nothing is configured
+     * anywhere, matching the old behavior byte-for-byte. See
+     * makeRuleClosure() for the supported handler shapes.
      */
     protected function resolveRule(string $name): ?Closure
     {
@@ -110,11 +142,18 @@ class XseoManager
         // otherwise misinterpret as a nested path instead of a literal key.
         $handler = config('xseo.rules', [])[$name] ?? null;
 
-        if ($handler === null) {
-            return null;
+        if ($handler !== null) {
+            return $this->rules[$name] = $this->makeRuleClosure("xseo.rules.$name", $handler);
         }
 
-        return $this->rules[$name] = $this->makeRuleClosure("xseo.rules.$name", $handler);
+        if ($name === 'default') {
+            return $this->rules[$name] = $this->makeRuleClosure(
+                'xseo.defaults_class',
+                config('xseo.defaults_class', DefaultRule::class)
+            );
+        }
+
+        return null;
     }
 
     /**

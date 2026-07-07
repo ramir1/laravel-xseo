@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Ramir\Xseo\Rules\DefaultRule;
 
 return [
     /*
@@ -32,6 +33,35 @@ return [
     | instantiated when its specific rule name is actually used in a request.
     */
     'rules' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default rule fallback values
+    |--------------------------------------------------------------------------
+    |
+    | Static meta key/value pairs used as the 'default' rule's output when
+    | neither Xseo::rule('default', ...) nor config('xseo.rules')['default']
+    | is registered (see XseoManager::resolveRule()). Read by the shipped
+    | Ramir\Xseo\Rules\DefaultRule — see 'defaults_class' below to swap it
+    | out. Leave as [] (the default) for no fallback defaults at all, which
+    | preserves this package's pre-'defaults' behavior exactly.
+    */
+    'defaults' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default rule fallback class
+    |--------------------------------------------------------------------------
+    |
+    | Class-string implementing Ramir\Xseo\Contracts\XseoRule, resolved via
+    | the container and memoized, used as the lowest-priority fallback when
+    | resolving the 'default' rule: Xseo::rule('default', ...) wins first,
+    | then config('xseo.rules')['default'], then this class. The shipped
+    | Ramir\Xseo\Rules\DefaultRule simply returns config('xseo.defaults', []).
+    | Point this at your own XseoRule implementation instead for defaults
+    | computed at request time (locale, tenant, auth user, ...).
+    */
+    'defaults_class' => DefaultRule::class,
 
     /*
     |--------------------------------------------------------------------------

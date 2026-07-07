@@ -59,6 +59,14 @@ Xseo::rule('posts.show', function ($xseo, $post) {
 });
 ```
 
+`Xseo::createOnly('name', ...$params)` behaves exactly like `create()` — same rule resolution, same `copy` auto-fill, same merge into the manager's state — except it never resolves or merges the `default` rule for that one call:
+
+```php
+Xseo::createOnly('standalone-embed', $widget);
+```
+
+Use this for call sites that must not inherit site-wide defaults (e.g. an embeddable widget page, an AMP variant, or an API-rendered fragment reusing the same manager).
+
 ## `config('xseo.rules')` — class/array-based rules
 
 As an alternative to registering closures in a file that gets `require`'d on every request, you can map rule names directly in config:
@@ -92,6 +100,33 @@ class PostsShowRule implements XseoRule
 This is a plain, serializable array of class-strings — fully compatible with `php artisan config:cache`. Unlike `files` (which `require`s the whole rules file, and thus registers every closure in it, the moment the `xseo` service is first resolved in a request), a class or `[Class, 'method']` handler here is only autoloaded and instantiated when its specific rule name is actually used — and only once per request (the resolved instance is memoized).
 
 `Xseo::rule()`-registered closures always take priority over `config('xseo.rules')` entries of the same name.
+
+## Default rule fallback (`config('xseo.defaults')` / `defaults_class`)
+
+If you don't want to register a `default` rule at all — via `Xseo::rule('default', ...)` or `config('xseo.rules')['default']` — you can instead set static fallback values directly:
+
+```php
+// config/xseo.php
+'defaults' => [
+    'og:type' => 'website',
+    'og:site_name' => config('app.name'),
+],
+```
+
+These are read by the package's shipped `Ramir\Xseo\Rules\DefaultRule`, wired in as `config('xseo.defaults_class')`. Resolution order for the `default` rule is:
+
+1. `Xseo::rule('default', $closure)` — wins if registered;
+2. `config('xseo.rules')['default']` — wins if set;
+3. `config('xseo.defaults_class')` (defaults to `Ramir\Xseo\Rules\DefaultRule`, which just returns `config('xseo.defaults', [])`).
+
+If you need defaults computed at request time (current locale, tenant, authenticated user, etc.) instead of a static array, point `defaults_class` at your own `XseoRule` implementation:
+
+```php
+// config/xseo.php
+'defaults_class' => \App\Xseo\ComputedDefaultsRule::class,
+```
+
+If none of the three is set, `create()` behaves exactly as if there were no default rule at all — an empty array is merged in, same as before this feature existed.
 
 ## Inline rules — no registration at all
 

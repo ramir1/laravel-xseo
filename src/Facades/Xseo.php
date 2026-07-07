@@ -13,6 +13,7 @@ use Ramir\Xseo\XseoManager;
  * @method static void rule(string $name, Closure $callback)
  * @method static array parent(string|array|Closure $rule, mixed ...$params)
  * @method static void create(string|array|Closure $rule, mixed ...$params)
+ * @method static void createOnly(string|array|Closure $rule, mixed ...$params)
  * @method static Collection|string|null get(string|false $key = false)
  * @method static Collection set(array $meta = [])
  * @method static string generate()

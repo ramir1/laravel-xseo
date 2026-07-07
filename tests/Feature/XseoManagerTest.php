@@ -85,3 +85,35 @@ it('auto-fills og:url from canonical via xseo.copy', function () {
 
     expect($xseo->get('og:url'))->toBe('https://example.test/');
 });
+
+it('createOnly() skips the default rule but still applies copy auto-fill and merges state', function () {
+    config(['xseo.copy' => ['title' => ['og:title']]]);
+
+    $xseo = new XseoManager;
+    $xseo->rule('default', fn () => ['og:type' => 'website']);
+    $xseo->rule('home', fn () => ['title' => 'Home']);
+
+    $xseo->createOnly('home');
+
+    expect($xseo->get('og:type'))->toBeNull();
+    expect($xseo->get('title'))->toBe('Home');
+    expect($xseo->get('og:title'))->toBe('Home');
+});
+
+it('createOnly() accepts the same inline rule shapes as create()', function () {
+    $xseo = new XseoManager;
+
+    $xseo->createOnly(fn ($xseo, string $slug) => ['title' => "Inline: $slug"], 'hello');
+
+    expect($xseo->get('title'))->toBe('Inline: hello');
+});
+
+it('createOnly() is resolvable via the Xseo facade', function () {
+    Xseo::rule('default', fn () => ['og:type' => 'website']);
+    Xseo::rule('facade-only', fn () => ['title' => 'Facade only']);
+
+    Xseo::createOnly('facade-only');
+
+    expect(Xseo::get('title'))->toBe('Facade only');
+    expect(Xseo::get('og:type'))->toBeNull();
+});

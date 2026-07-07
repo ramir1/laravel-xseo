@@ -209,7 +209,6 @@ When a rule sets a source key (e.g. `title`) and does **not** also explicitly se
 
 ```blade
 <head>
-    <title>{{ $title }}</title>
     {!! \Ramir\Xseo\Facades\Xseo::generate() !!}
 </head>
 ```
@@ -223,6 +222,15 @@ composer install
 vendor/bin/pest
 vendor/bin/pint --test
 vendor/bin/phpstan analyse
+```
+
+Or via the included Docker setup, no local PHP required:
+
+```bash
+docker compose run --rm php composer install
+docker compose run --rm php vendor/bin/pest
+docker compose run --rm php vendor/bin/pint --test
+docker compose run --rm php vendor/bin/phpstan analyse --memory-limit=512M
 ```
 
 ## License

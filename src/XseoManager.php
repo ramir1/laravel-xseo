@@ -20,6 +20,16 @@ class XseoManager
     /** @var array<string, Closure|array|string> */
     protected array $packageRules = [];
 
+    /**
+     * Meta keys to omit from the *next* generate() call only. Set via
+     * exclude(), consumed and reset inside generate() so it never leaks into
+     * a later, unrelated generate() call on this same (singleton) manager.
+     * Call exclude() immediately before the generate() it's meant to affect.
+     *
+     * @var array<int, string>
+     */
+    protected array $excluded = [];
+
     public string $divider;
 
     public function __construct()
@@ -270,8 +280,26 @@ class XseoManager
         return $this->metas = $this->metas->merge($meta);
     }
 
+    /**
+     * Exclude one or more meta keys from the next generate() call. Accepts a
+     * single key or an array of keys; repeated calls accumulate. A key that
+     * isn't currently set is silently ignored — no error either way.
+     *
+     *   Xseo::exclude('title')->generate();
+     *   Xseo::exclude(['title', 'og:title'])->generate();
+     */
+    public function exclude(string|array $keys): static
+    {
+        $this->excluded = array_merge($this->excluded, (array) $keys);
+
+        return $this;
+    }
+
     public function generate(): string
     {
-        return view('xseo::xseo-all', ['metas' => $this->metas])->render();
+        $metas = $this->excluded ? $this->metas->except($this->excluded) : $this->metas;
+        $this->excluded = [];
+
+        return view('xseo::xseo-all', ['metas' => $metas])->render();
     }
 }

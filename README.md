@@ -49,6 +49,12 @@ Xseo::rule('posts.show', function ($xseo, $post) {
 Xseo::rule('posts.index', PostsIndexRule::class); // class-string, resolved lazily on first use
 ```
 
+Call a registered rule by name — typically from a controller, before returning the view:
+
+```php
+Xseo::create('posts.show', $post);
+```
+
 `Xseo::create('posts.show', $post)` runs the `default` rule (if registered) plus the named rule, merges the results (named rule wins on conflicts), applies the `copy` auto-fill (see below), and merges everything into the manager's current metas.
 
 `Xseo::parent('name', ...$params)` calls another named rule directly and returns its **raw array**, without touching the manager's state — useful for one rule to build on top of another:
@@ -176,6 +182,26 @@ Xseo::create(['title' => 'Terms of Service']);          // static array
 Use `config('xseo.rules')` when the same rule name is reused across several call sites, or you want it cacheable via `config:cache` independently of any one controller. Use an inline handler when a rule is specific to a single controller action and there's no reason to name it in config at all.
 
 ## Calling a rule from a controller
+
+If the rule was registered by name (via `Xseo::rule()`, `config('xseo.rules')`, or `ruleRegister()`), just call `create()` with that name:
+
+```php
+use Ramir\Xseo\Facades\Xseo;
+
+class PageController
+{
+    public function show(string $slug): View
+    {
+        $page = Page::where('slug', $slug)->firstOrFail();
+
+        Xseo::create('posts.show', $page);
+
+        return view('pages.show', ['page' => $page]);
+    }
+}
+```
+
+Or, with no registration at all, pass a `[Class::class, 'method']` handler directly:
 
 ```php
 use App\Xseo\PostsShowRule;

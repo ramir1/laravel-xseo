@@ -1,5 +1,7 @@
 # Laravel Xseo
 
+**English** · [Русский](README.ru.md)
+
 Generic SEO meta-tags manager for Laravel: title, description, canonical, hreflang alternates, Open Graph, Twitter Card and JSON-LD — driven by simple named rules, not scattered across every view.
 
 ## Installation

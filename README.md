@@ -28,7 +28,7 @@ This creates `resources/views/vendor/xseo/xseo-all.blade.php`, which Laravel's v
 
 ## Rule DSL: `rule()` / `create()` / `parent()`
 
-A **rule** is a named closure (or class — see below) that returns an array of meta key/value pairs:
+A **rule** is a named handler — a `Closure`, a class-string implementing `Contracts\XseoRule`, a `[Class::class, 'method']` pair, or a plain associative array of static values — that returns an array of meta key/value pairs. `Xseo::rule()` accepts any of these shapes directly:
 
 ```php
 use Ramir\Xseo\Facades\Xseo;
@@ -45,6 +45,8 @@ Xseo::rule('posts.show', function ($xseo, $post) {
         'canonical' => route('posts.show', $post->slug),
     ];
 });
+
+Xseo::rule('posts.index', PostsIndexRule::class); // class-string, resolved lazily on first use
 ```
 
 `Xseo::create('posts.show', $post)` runs the `default` rule (if registered) plus the named rule, merges the results (named rule wins on conflicts), applies the `copy` auto-fill (see below), and merges everything into the manager's current metas.
@@ -99,7 +101,7 @@ class PostsShowRule implements XseoRule
 
 This is a plain, serializable array of class-strings — fully compatible with `php artisan config:cache`. Unlike `files` (which `require`s the whole rules file, and thus registers every closure in it, the moment the `xseo` service is first resolved in a request), a class or `[Class, 'method']` handler here is only autoloaded and instantiated when its specific rule name is actually used — and only once per request (the resolved instance is memoized).
 
-`Xseo::rule()`-registered closures always take priority over `config('xseo.rules')` entries of the same name.
+`Xseo::rule()`-registered entries (of any supported handler shape — Closure, class-string, or array) always take priority over `config('xseo.rules')` entries of the same name.
 
 ## `ruleRegister()` — package-provided fallback rules
 
@@ -112,11 +114,12 @@ but still let the consuming application override it — use `ruleRegister()` ins
 Xseo::ruleRegister('blog.index', BlogIndexRule::class);
 ```
 
-It accepts the same handler shapes as `config('xseo.rules')` (a `Closure`, a class-string
-implementing `XseoRule`, a `[Class::class, 'method']` pair, or a plain associative array of
-static values). Unlike `Xseo::rule()`, a `ruleRegister()` registration is only used as a
-fallback — the consuming application can override it by registering the same name through either
-of the higher-priority mechanisms above:
+It accepts the same handler shapes as `config('xseo.rules')` (and the same shapes `Xseo::rule()`
+itself accepts — a `Closure`, a class-string implementing `XseoRule`, a `[Class::class, 'method']`
+pair, or a plain associative array of static values). The difference isn't accepted shapes, it's
+priority: a `ruleRegister()` registration is only used as a fallback — the consuming application
+can override it by registering the same name through either of the higher-priority mechanisms
+above:
 
 ```php
 // config/xseo.php — overrides the package's 'blog.index' rule
@@ -127,7 +130,7 @@ of the higher-priority mechanisms above:
 
 Full resolution order for a given rule name:
 
-1. `Xseo::rule($name, $closure)` — highest priority;
+1. `Xseo::rule($name, $handler)` — highest priority (Closure, class-string, `[Class, method]`, or static array);
 2. `config('xseo.rules')[$name]`;
 3. `Xseo::ruleRegister($name, $handler)` — package-provided fallback;
 4. (only for `default`, see below) `config('xseo.defaults_class')`.
@@ -146,7 +149,7 @@ If you don't want to register a `default` rule at all — via `Xseo::rule('defau
 
 These are read by the package's shipped `Ramir\Xseo\Rules\DefaultRule`, wired in as `config('xseo.defaults_class')`. Resolution order for the `default` rule is:
 
-1. `Xseo::rule('default', $closure)` — wins if registered;
+1. `Xseo::rule('default', $handler)` — wins if registered;
 2. `config('xseo.rules')['default']` — wins if set;
 3. `Xseo::ruleRegister('default', $handler)` — wins if set;
 4. `config('xseo.defaults_class')` (defaults to `Ramir\Xseo\Rules\DefaultRule`, which just returns `config('xseo.defaults', [])`).

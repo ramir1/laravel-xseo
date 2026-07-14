@@ -14,7 +14,7 @@ class XseoManager
 {
     private Collection $metas;
 
-    /** @var array<string, Closure> */
+    /** @var array<string, Closure|array|string> */
     protected array $rules = [];
 
     /** @var array<string, Closure|array|string> */
@@ -31,11 +31,16 @@ class XseoManager
     /**
      * Register a named rule. A rule receives the manager instance plus any
      * extra arguments passed to create()/parent(), and returns an array of
-     * meta key => value pairs.
+     * meta key => value pairs. Accepts the same handler shapes as
+     * config('xseo.rules')/ruleRegister(): a Closure, a class-string
+     * implementing XseoRule, a [Class::class, 'method'] pair, or a plain
+     * associative array of static values. A class-string/array handler is
+     * not instantiated here — it's resolved via the container and memoized
+     * lazily, on the rule's first actual use (see resolveRule()).
      */
-    public function rule(string $name, Closure $callback): void
+    public function rule(string $name, Closure|array|string $handler): void
     {
-        $this->rules[$name] = $callback;
+        $this->rules[$name] = $handler;
     }
 
     /**
@@ -138,9 +143,11 @@ class XseoManager
     }
 
     /**
-     * Find a rule's Closure handler: first among those registered via rule(),
-     * then from config('xseo.rules') (built and memoized back into
-     * $this->rules). For the 'default' rule specifically, and only that name,
+     * Find a rule's Closure handler: first among those registered via rule()
+     * (a Closure is returned as-is; a class-string/array handler is resolved
+     * via makeRuleClosure() and memoized back into $this->rules on this
+     * first use), then from config('xseo.rules') (built and memoized the
+     * same way). For the 'default' rule specifically, and only that name,
      * one more fallback tier applies below both of those: config
      * ('xseo.defaults_class') (defaulting to the shipped Rules\DefaultRule,
      * which just returns config('xseo.defaults', [])), also memoized. This
@@ -152,7 +159,11 @@ class XseoManager
     protected function resolveRule(string $name): ?Closure
     {
         if (isset($this->rules[$name])) {
-            return $this->rules[$name];
+            $handler = $this->rules[$name];
+
+            return $handler instanceof Closure
+                ? $handler
+                : $this->rules[$name] = $this->makeRuleClosure("xseo.rule.$name", $handler);
         }
 
         // Not config("xseo.rules.$name") — rule names routinely contain dots
@@ -183,7 +194,7 @@ class XseoManager
      * Closure:
      *   - Closure -> used as-is;
      *   - string -> a registered name, resolved via resolveRule() (rule()
-     *     closures or config('xseo.rules'), memoized);
+     *     handlers or config('xseo.rules'), memoized);
      *   - array -> an inline handler, normalized fresh each call via
      *     makeRuleClosure() (no name to memoize against).
      */

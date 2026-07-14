@@ -48,6 +48,46 @@ it('prefers a Closure registered via rule() over the same name in config xseo.ru
     expect($xseo->get('title'))->toBe('From closure');
 });
 
+it('rule() accepts a class-string handler and memoizes the instance', function () {
+    HomeXseoRule::$constructed = 0;
+
+    $xseo = new XseoManager;
+    $xseo->rule('fixture.rule.class', HomeXseoRule::class);
+    $xseo->create('fixture.rule.class');
+    $xseo->parent('fixture.rule.class');
+
+    expect($xseo->get('title'))->toBe('From class rule');
+    expect(HomeXseoRule::$constructed)->toBe(1);
+});
+
+it('rule() accepts a [Class, method] callable-style handler', function () {
+    $xseo = new XseoManager;
+    $xseo->rule('fixture.rule.method', [PageXseoRuleHandler::class, 'meta']);
+    $xseo->create('fixture.rule.method', 'about');
+
+    expect($xseo->get('title'))->toBe('Page: about');
+});
+
+it('rule() throws for a class-string handler that does not implement XseoRule, only on first use', function () {
+    $xseo = new XseoManager;
+
+    // Registration itself must not throw — resolution is lazy.
+    $xseo->rule('fixture.rule.invalid', NotARule::class);
+
+    expect(fn () => $xseo->create('fixture.rule.invalid'))->toThrow(InvalidArgumentException::class);
+});
+
+it('prefers a class-string registered via rule() over the same name in config xseo.rules', function () {
+    HomeXseoRule::$constructed = 0;
+    config(['xseo.rules' => ['fixture.rule.precedence' => ['title' => 'From app config']]]);
+
+    $xseo = new XseoManager;
+    $xseo->rule('fixture.rule.precedence', HomeXseoRule::class);
+    $xseo->create('fixture.rule.precedence');
+
+    expect($xseo->get('title'))->toBe('From class rule');
+});
+
 it('throws for a class-string handler that does not implement XseoRule', function () {
     config(['xseo.rules' => ['fixture.invalid' => NotARule::class]]);
 

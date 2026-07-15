@@ -17,7 +17,7 @@ class XseoServiceProvider extends ServiceProvider
         // 'xseo')) would mean app('xseo') resolves fine but XseoManager::class
         // itself has no singleton binding — a fresh instance on every call,
         // never cached.
-        $this->app->singleton(XseoManager::class, fn () => new XseoManager);
+        $this->app->scoped(XseoManager::class, fn () => new XseoManager);
         $this->app->alias(XseoManager::class, 'xseo');
     }
 
